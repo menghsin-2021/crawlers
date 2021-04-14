@@ -1,5 +1,6 @@
 import os
-
+import time
+from concurrent.futures import ThreadPoolExecutor
 import json
 from collections import defaultdict
 import requests
@@ -29,7 +30,11 @@ def crawl(date):
         return
     # 爬特定資料 product -> who -> what
     rows = trs[3:]
+    
+    # 建立空字典
     data = defaultdict(dict)
+    date_data = defaultdict(dict)
+    
     for row in rows:
         tds = row.find_all('td')
         cells = [td.text.strip() for td in tds]
@@ -52,42 +57,54 @@ def crawl(date):
         data[product][who] = {headers[i]: row_data[i] for i in range(2, len(headers))}
                         # pprint(data)
                         # data = {row_data[0]: row_data[1:] for row}
-    return data
+        date_data[date.strftime('%Y/%m/%d')] = data
+    return date_data, date
 
-        
-# 建立 download 資料夾
-os.makedirs('downloads', exist_ok=True)
-# 建立字典
-date_data = defaultdict(dict)
-# 將日期設為今日
-date = datetime.today()
-# main()
-while True:
-    data = crawl(date)
-    date_data[date.strftime('%Y/%m/%d')] = data
-            ''' check 用 '''
-            # try: 
-            #     print('{}臺股期貨外資未平倉淨口數：{}'.format(date.strftime('%Y/%m/%d'), date_data[date.strftime('%Y/%m/%d')]['臺股期貨']['外資']['未平倉淨口數']))
-            # except TypeError:
-            #     print('{}沒資料'.format(date.strftime('%Y/%m/%d')))
-            ''' check 用 '''
-    # 限定爬取天數
-    date = date - timedelta(days=1)
-    if date <= datetime.today() - timedelta(days=10):
-        break
+def date_list(date):
+    date_list = []
+    while True:    # 限定爬取天數
+        date = date - timedelta(days=1)
+        if date <= datetime.today() - timedelta(days=10):
+            break
+        date_list.append(date)
+    return date_list
             # pprint('2021/04/13臺股期貨外資未平倉淨口數：' + str(date_data['2021/04/13']['臺股期貨']['外資']['未平倉淨口數']))
             # check 用
-    # 存成json檔
+
+# 存成json檔
+def save_json(date_data: dict, date):
     path_name = os.path.join('./downloads/', '{}.json'.format(str(date.strftime('%Y-%m-%d'))))
     with open(path_name, 'w', encoding='utf-8') as f:
         jsonStr = json.dumps(date_data, ensure_ascii=False, indent=5)
         json.dump(jsonStr, f)
-            # pprint(jsonStr)  # check 用
-    
-    # json 存檔說明
-    # Ensure_ascii，默認True, 如果dict內含有non-ASCII的中文字符，則會類似\uXXXX的顯示數據，設置成False後，就能正常顯示
-    # encoding，默認是UTF-8,用來設置生成的json數據的編碼方式
-    # 原文網址：https://kknews.cc/code/9omly2q.html
+        # pprint(jsonStr)  # check 用
+
+# 建立 download 資料夾
+os.makedirs('downloads', exist_ok=True)
+# 將日期設為今日
+date = datetime.today()
+
+# 取得日期列表
+date_list = date_list(date)
+# multithread
+if __name__ == "__main__":
+    start = time.time()
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        date_datas = executor.map(crawl, date_list)
+        try:
+            for date_data, date in date_datas:
+            print('{}臺股期貨外資未平倉淨口數：{}'.format(date.strftime('%Y/%m/%d'), date_data[date.strftime('%Y/%m/%d')]['臺股期貨']['外資']['未平倉淨口數']))
+        except TypeError:
+            print('{}沒資料'.format(date.strftime('%Y/%m/%d')))
+            save_json(date_data, date)
+            # i += 1
+    end = time.time()            
+    print(f'下載這些資料共花了 {end - start} 秒')    
+
+        # json 存檔說明
+        # Ensure_ascii，默認True, 如果dict內含有non-ASCII的中文字符，則會類似\uXXXX的顯示數據，設置成False後，就能正常顯示
+        # encoding，默認是UTF-8,用來設置生成的json數據的編碼方式
+        # 原文網址：https://kknews.cc/code/9omly2q.html
     
 
 

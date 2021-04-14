@@ -1,5 +1,5 @@
 import os
-
+import time
 import json
 from collections import defaultdict
 import requests
@@ -62,18 +62,14 @@ date_data = defaultdict(dict)
 # 將日期設為今日
 date = datetime.today()
 # main()
+start = time.time()
 while True:
     data = crawl(date)
     date_data[date.strftime('%Y/%m/%d')] = data
-            ''' check 用 '''
-            # try: 
-            #     print('{}臺股期貨外資未平倉淨口數：{}'.format(date.strftime('%Y/%m/%d'), date_data[date.strftime('%Y/%m/%d')]['臺股期貨']['外資']['未平倉淨口數']))
-            # except TypeError:
-            #     print('{}沒資料'.format(date.strftime('%Y/%m/%d')))
-            ''' check 用 '''
+
     # 限定爬取天數
     date = date - timedelta(days=1)
-    if date <= datetime.today() - timedelta(days=10):
+    if date <= datetime.today() - timedelta(days=730):
         break
             # pprint('2021/04/13臺股期貨外資未平倉淨口數：' + str(date_data['2021/04/13']['臺股期貨']['外資']['未平倉淨口數']))
             # check 用
@@ -83,7 +79,8 @@ while True:
         jsonStr = json.dumps(date_data, ensure_ascii=False, indent=5)
         json.dump(jsonStr, f)
             # pprint(jsonStr)  # check 用
-    
+end = time.time()            
+print(f'下載這些資料共花了 {end - start} 秒') # 下載這些資料共花了 971.4067673683167 秒   
     # json 存檔說明
     # Ensure_ascii，默認True, 如果dict內含有non-ASCII的中文字符，則會類似\uXXXX的顯示數據，設置成False後，就能正常顯示
     # encoding，默認是UTF-8,用來設置生成的json數據的編碼方式
