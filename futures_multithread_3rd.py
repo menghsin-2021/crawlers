@@ -7,7 +7,6 @@ import requests
 from bs4 import BeautifulSoup
 from datetime import datetime, timedelta
 from pprint import pprint
-
 import pandas as pd
 
 '''
@@ -25,20 +24,19 @@ def date_list(date):
             # pprint('2021/04/13臺股期貨外資未平倉淨口數：' + str(date_data['2021/04/13']['臺股期貨']['外資']['未平倉淨口數']))
             # check 用
 
+
 def crawl(date):
-    
     r = requests.get('https://www.taifex.com.tw/cht/3/futContractsDate?queryType=1&goDay=&doQuery=1&dateaddcnt=&queryDate={}%2F{}%2F{}&commodityId='.format(date.year, date.month, date.day))
     if r.status_code == requests.codes.ok:
         soup = BeautifulSoup(r.text, 'html.parser')
-
     # 解決沒資料的日期
     try:
         print('crawling', date.strftime('%Y/%m/%d'))
         table = soup.find('table', class_='table_f')
         trs = table.find_all('tr')
-           
-    # 爬特定資料 product -> who -> what
+        # 爬特定資料 product -> who -> what
         rows = trs[3:]
+        # 零參數函式，當檢查的key不存在，會用零參數函式添加一個新值
         data = defaultdict(dict)
         for row in rows:
             tds = row.find_all('td')
@@ -51,6 +49,7 @@ def crawl(date):
             else: 
                 row_data = [product] + cells
                             # print(data)  #check 用       
+            # 將逗點去除
             converted = [int(d.replace(',','')) for d in row_data[2:]]
             row_data = row_data[:2] + converted
                             # print(row_data)  #check 用       
@@ -65,19 +64,18 @@ def crawl(date):
             date_data = defaultdict(dict)
             date_data[date.strftime('%Y/%m/%d')] = data
             # print(date_data)
-
         return date, date_data
 
     except AttributeError:
         print('{}沒資料'.format(date.strftime('%Y/%m/%d')))
-        return date, 'none'  # 要 return 東西 如果為 None 沒辦法 call 出來
-        
+        return date, 'None'  # 要 return 東西 如果為 None 沒辦法 call 出來
+       
+
 # 建立 download 資料夾
 os.makedirs('downloads', exist_ok=True)
-
 # 將日期設為今日
 date = datetime.today()
-# main()
+# 存成 date_list
 date_list = date_list(date)
 if __name__ == "__main__":
     start = time.time()
@@ -86,26 +84,28 @@ if __name__ == "__main__":
         for date_data in date_datas:
             date = date_data[0]
             date_data = date_data[1]  # 要 return 東西 如果為 None 沒辦法 call 出來
-
             try: 
                 print('{}臺股期貨外資未平倉淨口數：{}'.format(date.strftime('%Y/%m/%d'), date_data[date.strftime('%Y/%m/%d')]['臺股期貨']['外資']['未平倉淨口數']))
             except TypeError:
                 print('{}沒資料'.format(date.strftime('%Y/%m/%d')))    
             # 存成json檔
             path_name = os.path.join('./downloads/', '{}.json'.format(str(date.strftime('%Y-%m-%d'))))
-            with open(path_name, 'w', encoding='utf-8') as f:
+            with open(path_name, 'w') as f:
                 jsonStr = json.dumps(date_data, ensure_ascii=False, indent=5)
+                jsonStr = json.loads(jsonStr)
                 json.dump(jsonStr, f)
     end = time.time()            
-    print(f'下載這些資料共花了 {end - start} 秒')  #下載這些資料共花了 222.479008436203 秒
+    print(f'下載這些資料共花了 {end - start} 秒')  #下載這些資料共花了 233.09515166282654 秒
                     # pprint(jsonStr)  # check 用
 
         
     
     # json 存檔說明
-    # Ensure_ascii，默認True, 如果dict內含有non-ASCII的中文字符，則會類似\uXXXX的顯示數據，設置成False後，就能正常顯示
+    # ensure_ascii，默認True, 如果dict內含有non-ASCII的中文字符，則會類似\uXXXX的顯示數據，設置成False後，就能正常顯示
     # encoding，默認是UTF-8,用來設置生成的json數據的編碼方式
-    # 原文網址：https://kknews.cc/code/9omly2q.html
+    # .dumps .loads 兩者在 python 當中處理字串轉換
+    # .dump .load 兩者在 python 當中處理檔案轉換
+
     
 
 
